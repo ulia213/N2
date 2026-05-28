@@ -400,7 +400,7 @@ apt install docker.io docker-compose -y
 xdg-open "https://drive.google.com/file/d/1wOvy1El4w5-UZ4h2Fc8JRlxLqCtUsEYd/view?usp=sharing"
 read -p "Нажмите Enter для продолжения..."
 cp /root/Загрузки/Additional.7z /root
-apt install p7zip-full
+apt install p7zip-full -y
 7z x /root/Additional.7z
 7z x Additional.iso -o/root/Additional
 docker image load -i /root/Additional/docker/site_latest.tar
@@ -445,7 +445,7 @@ volumes:
 
 docker-compose -f docker-compose.yaml up -d
 docker ps
-Переходим на HQ-CLI и вводим IP BR-SRV http://192.168.200.2:8080
+Переходим на HQ-CLI и вводим  http://192.168.200.2:8080
 
 
 ########## НАСТРОЙКА HQ-SRV ################################################
