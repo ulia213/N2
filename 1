@@ -202,6 +202,9 @@ apt install openssh-server -y
 apt update -y 
 apt install openssh-server -y
 
+nano /etc/dhcp/dhcpd.conf
+option domain-name-server 192.168.100.2;
+systemctl restart isc-dhcp-server
 
 
 
@@ -440,6 +443,9 @@ services:
 volumes:
   db_data:
 
+docker-compose -f docker-compose.yaml up -d
+docker ps
+Переходим на HQ-CLI и вводим IP BR-SRV http://192.168.200.2:8080
 
 
 ########## НАСТРОЙКА HQ-SRV ################################################
@@ -531,6 +537,41 @@ apt update -y
 apt install openssh-server -y
 
 
+apt update
+apt install apache2 -y
+apt install mariadb-server mariadb-client -y
+apt install php8.4 php8.4-mysqli -y
+apt install p7zip-full -y
+7z x Additional.iso -o/root/Additional
+
+mount -o loop,ro Additional.iso /root/Additional
+cp /root/Additional/web/dump.sql /tmp
+
+mysql -u root
+CREATE DATABASE webdb;
+CREATE USER 'web'@'localhost' IDENTIFIED BY 'P@ssw0rd';
+GRANT ALL PRIVILEGES ON webdb.* TO 'web'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+
+mysql -u root webdb < /tmp/dump.sql
+mkdir -p /var/www/html
+
+cp /root/Additional/web/index.php /var/www/html
+chown -R www-data:www-data /var/www/html
+chmod -R 755 /var/www/html
+
+nano /var/www/html/index.php
+<?php
+$servername = "localhost";
+$username = "web";
+$password = "P@ssw0rd";
+$dbname = "webd";
+
+rm -f /var/www/html/index.html
+systemctl restart apache2
+
+
 ########## НАСТРОЙКА HQ-CLI ################################################
 
 hostnamectl set-hostname hq-cli.au-team.irpo; exec bash
@@ -560,3 +601,9 @@ useradd -m -s /bin/bash sshuser -U
 usermod -aG sudo sshuser
 passwd sshuser
 P@ssw0rd
+
+/etc/resolv.conf
+nameserver 192.168.100.2
+Проверяем работу сайта
+http://192.168.100.2/
+
