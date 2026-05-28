@@ -1,0 +1,422 @@
+Настройка Ctrl+c Ctrl+v
+
+######## НАСТРОЙКА ISP ###########################################
+
+nano /etc/apt/sources.list
+
+hostnamectl set-hostname isp.au-team.irpo; exec bash
+
+timedatectl set-timezone Asia/Krasnoyarsk
+
+nano /etc/network/interfaces
+
+auto ens3
+iface ens3 inet dhcp
+
+auto ens4
+iface ens4 inet static
+address 172.16.1.1/28
+
+auto ens5
+iface ens5 inet static
+address 172.16.2.1/28
+
+post-up nft -f /etc/nftables.conf
+
+
+nano /etc/sysctl.d/sysctl.conf
+
+net.ipv4.ip_forward=1
+
+
+nano /etc/nftables.conf
+
+table ip nat {
+    chain postrouting {
+        type nat hook postrouting priority 100; policy accept
+        meta l4proto { gre, ipip, ospf } counter return
+        masquerade
+    }
+}
+
+
+
+apt install chrony –y
+
+nano /etc/chrony/chrony.conf
+
+#pool 2.debian.pool.ntp.org iburst
+server ntp1.vniiftri.ru iburst prefer
+local stratum 5
+allow 0.0.0.0/0
+
+systemctl restart chronyd
+
+########## НАСТРОЙКА HQ-RTR ############
+
+nano /etc/apt/sources.list
+
+hostnamectl set-hostname hq-rtr.au-team.irpo; exec bash
+timedatectl set-timezone Asia/Krasnoyarsk
+
+nano /etc/network/interfaces
+
+auto ens3
+iface ens3 inet static
+address 172.16.1.2/28
+gateway 172.16.1.1
+
+auto vlan100
+iface vlan100 inet static
+address 192.168.100.1/27
+
+auto vlan200
+iface vlan200 inet static
+address 192.168.100.33/28
+
+auto vlan999
+iface vlan999 inet static
+address 192.168.100.49/29
+
+post-up nft -f /etc/nftables.conf
+post-up ip link set hq-sw up
+post-up ip link set gre0 up
+
+nano /etc/sysctl.d/sysctl.conf
+
+net.ipv4.ip_forward=1
+
+nano /etc/nftables.conf
+
+table ip nat {
+    chain postrouting {
+        type nat hook postrouting priority 100; policy accept
+        meta l4proto { gre, ipip, ospf } counter return
+        masquerade
+    }
+}
+
+
+useradd -m -s /bin/bash net_admin –U
+
+usermod -aG sudo net_admin
+
+passwd net_admin
+P@ssw0rd
+
+Visudo
+
+net_admin ALL=(ALL:ALL) NOPASSWD:ALL
+su - net_admin
+sudo -i
+
+apt install -y openvswitch-switch
+
+ovs-vsctl add-br hq-sw
+
+ovs-vsctl add-port hq-sw ens4 tag=100
+
+ovs-vsctl add-port hq-sw ens5 tag=200
+
+ovs-vsctl add-port hq-sw ens6 tag=999
+
+ovs-vsctl add-port hq-sw vlan100 tag=100 -- set interface vlan100 type=internal
+
+ovs-vsctl add-port hq-sw vlan200 tag=200 -- set interface vlan200 type=internal
+
+ovs-vsctl add-port hq-sw vlan999 tag=999 -- set interface vlan999 type=internal
+
+systemctl restart networking
+
+настройка gre будет в nmtui :
+nmtui
+•	Выбираем «Редактировать подключения»
+•	Выбираем «Добавить»
+•	Выбираем «Туннель IP»
+•	Задаём  имена «gre» и «tun1»
+•	«Режим» выбираем «GRE»
+•	«Родительский» указываем ens3
+•	«Локальный IP»  172.16.1.2
+•	«Удаленный IP» P 172.16.2.2
+•	Переходим к «КОНФИГУРАЦИЯ IPv4», переключаем на «Вручную»
+•	Задаём адрес IPv4  10.10.0.1/30
+далее выходим и пишем :
+systemctl restart networking
+ip -br a ( если гре0 UNKNOWN - то всё нормас, если нет нужно удалить то что созадли и сделать по новой)
+nmcli connection modify gre ip-tunnel.ttl 64
+
+
+apt install -y frr
+
+nano /etc/frr/daemons
+
+ospfd=yes
+systemctl restart frr
+
+vtysh
+conf t
+router ospf
+ospf router-id 1.1.1.1
+network 192.168.100.0/27 area 0
+network 192.168.100.32/28 area 0
+network 10.10.0.0/30 area 0
+area 0 authentication
+int tun1
+no ip ospf passive
+no ip ospf network broadcast
+ip ospf authentication
+ip ospf authentication-key password
+exit
+exit
+wr
+reboot
+
+apt install -y isc-dhcp-server
+
+nano /etc/default/isc-dhcp-server
+
+INTERFACESv4="vlan200"
+
+nano /etc/dhcp/dhcpd.conf
+
+option domain-name "au-team.irpo";
+option domain-name-servers 192.168.100.2;
+
+в конце файла вставляем :
+
+subnet 192.168.100.32 netmask 255.255.255.240 {
+    range 192.168.100.34 192.168.100.47;
+    option routers 192.168.100.33;
+}
+
+systemctl restart isc-dhcp-server
+(заходим в HQ-CLI и меняем inet static -> inet dhcp)
+
+########## НАСТРОЙКА BR-RTR ####################################
+
+nano /etc/apt/sources.list
+
+hostnamectl set-hostname br-rtr.au-team.irpo; exec bash
+timedatectl set-timezone Asia/Krasnoyarsk
+nano /etc/network/interfaces
+
+auto ens3
+iface ens3 inet static
+address 172.16.2.2/28
+gateway 172.16.2.1
+
+auto ens4
+iface ens4 inet static
+address 192.168.200.1/28
+
+
+post-up nft -f /etc/nftables.conf
+post-up ip link set gre0 up
+
+nano /etc/sysctl.d/sysctl.conf
+
+net.ipv4.ip_forward=1
+
+nano /etc/nftables.conf
+
+
+table ip nat {
+    chain postrouting {
+        type nat hook postrouting priority 100; policy accept
+        meta l4proto { gre, ipip, ospf } counter return
+        masquerade
+    }
+
+useradd -m -s /bin/bash net_admin –U
+
+usermod -aG sudo net_admin
+
+passwd net_admin
+P@ssw0rd
+
+Visudo
+
+net_admin ALL=(ALL:ALL) NOPASSWD:ALL
+su - net_admin
+sudo -i
+
+настройка gre будет в nmtui :
+nmtui
+•	Выбираем «Редактировать подключения»
+•	Выбираем «Добавить»
+•	Выбираем «Туннель IP»
+•	Задаём  имена «gre» и «tun1»
+•	«Режим» выбираем «GRE»
+•	«Родительский» указываем ens3
+•	«Локальный IP»  172.16.2.2
+•	«Удаленный IP» P 172.16.1.2
+•	Переходим к «КОНФИГУРАЦИЯ IPv4», переключаем на «Вручную»
+•	Задаём адрес IPv4  10.10.0.2/30
+далее выходим и пишем :
+systemctl restart networking
+ip -br a ( если гре0 UNKNOWN - то всё нормас, если нет нужно удалить то что созадли и сделать по новой)
+nmcli connection modify gre ip-tunnel.ttl 64
+
+
+apt install -y frr
+
+nano /etc/frr/daemons
+
+ospfd=yes
+
+systemctl restart frr
+
+vtysh
+conf t
+router ospf
+ospf router-id 2.2.2.2
+network 192.168.200.0/28 area 0
+network 10.10.0.0/30 area 0
+area 0 authentication
+int tun1
+no ip ospf passive
+no ip ospf network broadcast
+ip ospf authentication
+ip ospf authentication-key password
+exit
+exit
+wr
+reboot
+
+
+########## НАСТРОЙКА BR-SRV ################################################
+
+
+nano /etc/apt/sources.list
+
+hostnamectl set-hostname br-srv.au-team.irpo; exec bash
+timedatectl set-timezone Asia/Krasnoyarsk
+
+nano /etc/network/interfaces
+
+auto ens3
+iface ens3 inet static
+address 192.168.200.2/28
+gateway 192.168.200.1
+
+useradd -m -s /bin/bash sshuser -u 2026 –U
+
+usermod -aG sudo sshuser
+
+passwd sshuser
+P@$$word
+
+Visudo
+
+sshuser ALL=(ALL:ALL) NOPASSWD:ALL
+su - sshuser
+sudo -i
+
+apt install -y openssh-server
+
+nano /etc/ssh/sshd_config
+Port 2026
+AllowUsers sshuser
+MaxAuthTries 2
+Banner /etc/ssh_banner
+
+nano /etc/ssh_banner
+
+*******************************************************
+*                                                     *
+*                 Authorized access only              *
+*                                                     *
+*******************************************************
+
+systemctl restart ssh
+
+
+
+
+########## НАСТРОЙКА HQ-SRV ################################################
+
+nano /etc/apt/sources.list
+
+hostnamectl set-hostname hq-srv.au-team.irpo; exec bash
+
+timedatectl set-timezone Asia/Krasnoyarsk
+
+nano /etc/network/interfaces
+
+auto ens3
+iface ens3 inet static
+address 192.168.100.2/27
+gateway 192.168.100.1
+
+useradd -m -s /bin/bash sshuser -u 2026 –U
+
+usermod -aG sudo sshuser
+
+passwd sshuser
+P@$$word
+
+Visudo
+
+sshuser ALL=(ALL:ALL) NOPASSWD:ALL
+su - sshuser
+sudo -i
+
+apt install -y openssh-server
+
+nano /etc/ssh/sshd_config
+Port 2026
+AllowUsers sshuser
+MaxAuthTries 2
+Banner /etc/ssh_banner
+
+nano /etc/ssh_banner
+
+*******************************************************
+*                                                     *
+*                 Authorized access only              *
+*                                                     *
+*******************************************************
+systemctl restart ssh
+
+apt update -y
+apt install dnsmasq -y
+nano /etc/dnsmasq.conf
+
+interface=ens3 
+server=8.8.8.8 
+domain=au-team.irpo 
+listen-address=192.168.100.2 
+no-resolv 
+no-hosts 
+address=/hq-rtr.au-team.irpo/192.168.100.1 
+ptr-record=1.100.168.192.in-addr.arpa,hq-rtr.au-team.irpo 
+address=/br-rtr.au-team.irpo/192.168.200.1 
+address=/hq-srv.au-team.irpo/192.168.100.2 
+ptr-record=2.100.168.192.in-addr.arpa,hq-srv.au-team.irpo 
+address=/hq-cli.au-team.irpo/192.168.100.35 
+ptr-record=34.100.168.192.in-addr.arpa,hq-cli.au-team.irpo 
+address=/br-srv.au-team.irpo/192.168.200.2 
+ptr-record=2.200.168.192.in-addr.arpa,br-srv.au-team.irpo 
+address=/docker.au-team.irpo/172.16.1.1 
+address=/web.au-team.irpo/172.16.2.1
+
+nano /etc/resolv.conf
+nameserver 127.0.0.1
+
+
+
+########## НАСТРОЙКА HQ-CLI ################################################
+
+nano /etc/apt/sources.list
+
+hostnamectl set-hostname hq-cli.au-team.irpo; exec bash
+
+timedatectl set-timezone Asia/Krasnoyarsk
+
+nano /etc/network/interfaces
+
+auto ens3
+iface ens3 inet dhcp
+
+
+
