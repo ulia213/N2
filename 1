@@ -47,6 +47,12 @@ allow 0.0.0.0/0
 
 
 systemctl restart chronyd
+.......................................................................................5 ЗАДАНИЕ
+
+apt install ansible sshpass -y
+mkdir -p /etc/ansible
+
+nano /etc/ansible/ansible.cfg
 
 
 
@@ -97,7 +103,7 @@ useradd -m -s /bin/bash net_admin -U
 usermod -aG sudo net_admin
 passwd net_admin
 P@ssw0rd
-visudo
+Visudo
 net_admin	ALL=(ALL:ALL) NOPASSWD:ALL
 su - net_admin
 sudo -i
@@ -177,11 +183,14 @@ subnet 192.168.100.32 netmask 255.255.255.240 {
     option routers 192.168.100.33;
 }
 
+
+
 systemctl restart isc-dhcp-server
 (заходим в HQ-CLI и меняем inet static -> inet dhcp)
 
 
 /////////////////////////////////////////////////////////ДАЛЬШЕ ИДЕТ 2Й МОУДЛЬ (тестово)///////////////////////////////////////////////////////////////
+
 apt update -y
 apt install chrony –y
 
@@ -193,6 +202,8 @@ server 172.16.1.1 iburst prefer
 systemctl restart chronyd
 
 
+apt update -y 
+apt install openssh-server -y
 
 
 
@@ -229,13 +240,13 @@ table ip nat {
         meta l4proto { gre, ipip, ospf } counter return
         masquerade
     }
-}
+
 
 useradd -m -s /bin/bash net_admin -U
 usermod -aG sudo net_admin
 passwd net_admin
 P@ssw0rd
-visudo
+Visudo
 net_admin	ALL=(ALL:ALL) NOPASSWD:ALL
 su - net_admin
 sudo -i
@@ -295,7 +306,8 @@ server 172.16.2.1 iburst prefer
 
 systemctl restart chronyd
 
-
+apt update -y 
+apt install openssh-server -y
 
 
 ########## НАСТРОЙКА BR-SRV ################################################
@@ -316,7 +328,7 @@ useradd -m -s /bin/bash sshuser -u 2026 -U
 usermod -aG sudo sshuser
 passwd sshuser
 P@$$word
-visudo
+Visudo
 sshuser ALL=(ALL:ALL) NOPASSWD:ALL
 su - sshuser
 sudo -i
@@ -356,6 +368,31 @@ server 172.16.2.1 iburst prefer
 
 systemctl restart chronyd
 
+apt update -y
+apt install ansible sshpass -y
+mkdir -p /etc/ansible
+
+nano /etc/ansible/ansible.cfg
+[defaults]
+host_key_checking=False
+
+nano /etc/ansible/hosts
+[hq]
+192.168.100.1 ansible_user=net_admin ansible_password=P@ssw0rd
+192.168.100.2 ansible_user=sshuser ansible_password=P@ssw0rd 	ansible_port=2026
+192.168.100.35 ansible_user=sshuser ansible_password=P@ssw0rd
+
+[br]
+192.168.200.1 ansible_user=net_admin ansible_password=P@ssw0rd
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3.13
+
+ansible all -m ping
+
+
+
+
 
 ########## НАСТРОЙКА HQ-SRV ################################################
 
@@ -376,7 +413,7 @@ useradd -m -s /bin/bash sshuser -u 2026 -U
 usermod -aG sudo sshuser
 passwd sshuser
 P@$$word
-visudo
+Visudo
 sshuser ALL=(ALL:ALL) NOPASSWD:ALL
 su - sshuser
 sudo -i
@@ -464,3 +501,11 @@ nano /etc/chrony/chrony.conf
 server 172.16.1.1 iburst prefer
 
 systemctl restart chronyd
+
+apt update -y 
+apt install openssh-server -y
+
+useradd -m -s /bin/bash sshuser -U
+usermod -aG sudo sshuser
+passwd sshuser
+P@ssw0rd
