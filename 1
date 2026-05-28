@@ -240,7 +240,7 @@ table ip nat {
         meta l4proto { gre, ipip, ospf } counter return
         masquerade
     }
-
+}
 
 useradd -m -s /bin/bash net_admin -U
 usermod -aG sudo net_admin
