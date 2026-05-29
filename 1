@@ -83,11 +83,33 @@ net.ipv4.ip_forward=1
 
 
 nano /etc/nftables.conf
+#!/usr/sbin/nft -f
+
+flush ruleset
+
 table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority 0;
+        iifname "ens3" tcp dport 8080 dnat to 192.168.100.2:8080
+        iifname "ens3" tcp dport 2026 dnat to 192.168.100.2:2026
+    }
+    
     chain postrouting {
         type nat hook postrouting priority 100; policy accept
         meta l4proto { gre, ipip, ospf } counter return
         masquerade
+    }
+}
+
+table inet filter {
+    chain input {
+        type filter hook input priority filter;
+    }
+    chain forward {
+        type filter hook forward priority filter;
+    }
+    chain output {
+        type filter hook output priority filter;
     }
 }
 
@@ -233,12 +255,35 @@ net.ipv4.ip_forward=1
 
 
 nano /etc/nftables.conf
+#!/usr/sbin/nft -f
+
+flush ruleset
+
 table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority 0;
+        iifname "ens3" tcp dport 8080 dnat to 192.168.100.2:8080
+        iifname "ens3" tcp dport 2026 dnat to 192.168.100.2:2026
+    }
+    
     chain postrouting {
         type nat hook postrouting priority 100; policy accept
         meta l4proto { gre, ipip, ospf } counter return
         masquerade
     }
+}
+
+table inet filter {
+    chain input {
+        type filter hook input priority filter;
+    }
+    chain forward {
+        type filter hook forward priority filter;
+    }
+    chain output {
+        type filter hook output priority filter;
+    }
+}
 
 
 useradd -m -s /bin/bash net_admin -U
