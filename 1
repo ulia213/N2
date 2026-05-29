@@ -537,45 +537,33 @@ apt update -y
 apt install openssh-server -y
 
 
-apt update
+apt update -y
 xdg-open "https://drive.google.com/file/d/1wOvy1El4w5-UZ4h2Fc8JRlxLqCtUsEYd/view?usp=sharing"
+ДАЛЬШЕ Я ХУЙ ЗНАЕТ ЧЕ ПОНАПИСАНО
+read -p "Нажмите Enter для продолжения..."
 cp /root/Загрузки/Additional.7z /root
 apt install p7zip-full
 7z x /root/Additional.7z
 7z x Additional.iso -o/root/Additional
- 
 apt install apache* -y
 apt install php php8.4 php-curl php-zip php-xml libapache2-mod-php php-mysql php-mbstring php-gd php-intl php-soap -y
 apt install mariadb-* -y
- 
 systemctl enable --now mariadb
-systemctl enable --now apache2
- 
+systemctl enable --now apache2 
+cp /root/Additional/web/index.php /var/www/html
 mount /root/Additional.iso /mnt/
 cp /mnt/web/index.php /var/www/html
 cp /mnt/web/logo.png /var/www/html
- 
-nano /var/www/html/index.php
-$username = “web”;
-$password = “P@ssw0rd”;
-$dbname = “webdb”;
- 
+sed -i '3c $username = “web”;' /var/www/html/index.php
+sed -i '4c $password = “P@ssw0rd”;' /var/www/html/index.php
+sed -i '5c $dbname = “webdb”;' /var/www/html/index.php
 mariadb -u root
-CREATE DATABASE webdb;
-CREATE USER ‘web’@’localhost’ IDENTIFIED BY ‘P@ssw0rd’;
-GRANT ALL PRIVILEGES ON webdb.* TO ‘web’@’localhost’ WITH GRANT OPTION;
-EXIT;
- 
+read -p "Нажмите Enter для продолжения..."
 mariadb -u web -p -D webdb < /mnt/web/dump.sql
-Там будет просить пароль: P@ssw0rd
-
-Проверить: mariadb -u root
-USE webdb;
-SHOW TABLES;
- 
 rm /var/www/html/index.html
- 
-systemctl enable --now apache2 && systemctl restart apache2
+sed -i '1c <VirtualHost *:8080>”;' /etc/apache2/sites-available/000-default.conf
+sed -i '5c Listen 8080”;' /etc/apache2/ports.conf
+systemctl restart apache2
  
 В HQ-CLI в браузере: http:/192.168.100.2/
 
@@ -614,28 +602,14 @@ nameserver 192.168.100.2
 Проверяем работу сайта
 http://192.168.100.2/
 
-table ip nat {
-    chain prerouting {
-        type nat hook prerouting priority 0;
-        iifname "ens3" tcp dport 8080 dnat to 192.168.100.2:8080
-        iifname "ens3" tcp dport 2026 dnat to 192.168.100.2:2026
-    }
-    
-    chain postrouting {
-        type nat hook postrouting priority 100; policy accept
-        meta l4proto { gre, ipip, ospf } counter return
-        masquerade
-    }
-}
-
-table inet filter {
-    chain input {
-        type filter hook input priority filter;
-    }
-    chain forward {
-        type filter hook forward priority filter;
-    }
-    chain output {
-        type filter hook output priority filter;
-    }
-}
+apt install openssh-server -y
+useradd -m -s /bin/bash sshuser -U
+usermod -aG sudo sshuser
+passwd sshuser
+xdg-open "https://drive.google.com/file/d/1wOvy1El4w5-UZ4h2Fc8JRlxLqCtUsEYd/view?usp=sharing"
+read -p "Нажмите Enter для продолжения..."
+cp /root/Загрузки/Additional.7z /root
+apt install p7zip-full
+7z x /root/Additional.7z
+apt install ./Yandex.deb -y
+yandex-browser-stable --no-sandbox
