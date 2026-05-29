@@ -369,7 +369,8 @@ nano /etc/chrony/chrony.conf
 server 172.16.2.1 iburst prefer
 
 systemctl restart chronyd
-......................................5 задание (временно)
+
+
 apt update -y
 apt install ansible sshpass -y
 mkdir -p /etc/ansible
@@ -381,7 +382,7 @@ host_key_checking=False
 nano /etc/ansible/hosts
 [hq]
 192.168.100.1 ansible_user=net_admin ansible_password=P@ssw0rd
-192.168.100.2 ansible_user=sshuser ansible_password=P@ssw0rd 	ansible_port=2026
+192.168.100.2 ansible_user=sshuser ansible_password=P@ssw0rd    ansible_port=2026
 192.168.100.35 ansible_user=sshuser ansible_password=P@ssw0rd
 
 [br]
