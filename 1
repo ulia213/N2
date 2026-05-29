@@ -1,28 +1,5 @@
-server {
-    listen 80;
-    server_name web.au-team.irpo;
-    auth_basic "Restricted Access";
-    auth_basic_user_file /etc/nginx/.htpasswd;
-    location / {
-        proxy_pass http://172.16.1.2:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
 
-server {
-    listen 80;
-    server_name docker.au-team.irpo;
-    location / {
-        proxy_pass http://172.16.2.2:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-
-Настройка Ctrl+c Ctrl+v
-
-######## НАСТРОЙКА ISP ############################
+########################################################################## НАСТРОЙКА ISP ############################################################################
 
 hostnamectl set-hostname isp.au-team.irpo; exec bash
 
@@ -39,6 +16,7 @@ address 172.16.1.1/28
 auto ens5
 iface ens5 inet static
 address 172.16.2.1/28
+post-up nft -f /etc/nftables.conf
 
 
 nano /etc/sysctl.d/sysctl.conf
@@ -55,7 +33,7 @@ table ip nat {
 }
 
 
-/////////////////////////////////////////////////////////ДАЛЬШЕ ИДЕТ 2Й МОУДЛЬ (тестово)///////////////////////////////////////////////////////////////
+////////////////////////ДАЛЬШЕ ИДЕТ 2Й МОУДЛЬ (тестово)//////////////////
 
 apt update -y
 apt install chrony –y
@@ -72,7 +50,7 @@ allow 0.0.0.0/0
 
 
 
-########## НАСТРОЙКА HQ-RTR ############
+########################################################################## НАСТРОЙКА HQ-RTR ##########################################################################
 
 hostnamectl set-hostname hq-rtr.au-team.irpo; exec bash
 timedatectl set-timezone Asia/Krasnoyarsk
@@ -205,7 +183,7 @@ systemctl restart isc-dhcp-server
 (заходим в HQ-CLI и меняем inet static -> inet dhcp)
 
 
-/////////////////////////////////////////////////////////ДАЛЬШЕ ИДЕТ 2Й МОУДЛЬ (тестово)///////////////////////////////////////////////////////////////
+////////////////ДАЛЬШЕ ИДЕТ 2Й МОУДЛЬ (тестово)////////////////////////////
 
 apt update -y
 apt install chrony –y
@@ -231,7 +209,7 @@ systemctl restart isc-dhcp-server
 
 
 
-########## НАСТРОЙКА BR-RTR ####################################
+#################################################################################### НАСТРОЙКА BR-RTR ##############################################################################################################
 
 hostnamectl set-hostname br-rtr.au-team.irpo; exec bash
 
